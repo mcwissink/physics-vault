@@ -13,7 +13,6 @@
 	  score1 = 0,
 	  score2 = 0,
 	  player1 = {
-	    sprite : document.getElementById("astronaut"),
 	    gravityX : 0,
 	    gravityY : 0,
 	    gravity : 0.1,
@@ -42,7 +41,6 @@
 	    color : "red",
 	  }
       player2 = {
-	sprite : document.getElementById("astronaut"),
 	gravityX : 0,
 	gravityY : 0,
 	gravity : 0.1,
@@ -345,8 +343,6 @@
 	//draw all the objects
 	drawObjectPlayer(player1);
 	drawObjectPlayer(player2);
-	//drawImageRotate(player1.sprite,player1.x,player1.y,player1.rotation);
-	//drawImageRotate(player2.sprite,player2.x,player2.y,player2.rotation);
 	for(var i = 0; i < goals.length; i++){
 	  drawObject(goals[i]);
 	}
