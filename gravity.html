@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html style="height:100%; display:flex; align-items:center; justify-content:center">
+  <head>
+    <title>RGB Hocky_Ball</title>
+  </head>
+  <body>
+    <canvas id="canvas" style="border:1px solid #000" width="800" height="600"></canvas>
+    <script>
+      var canvas = document.getElementById("canvas"),
+	  ctx = canvas.getContext("2d"),
+	  width = 800,
+	  height = 600,
+	  score1 = 0,
+	  score2 = 0,
+	  player1 = {
+	    sprite : document.getElementById("astronaut"),
+	    gravityX : 0,
+	    gravityY : 0,
+	    gravity : 0.1,
+	    gravAngle : 0,
+	    radius : 20,
+	    x : width,
+	    y : height/2,
+	    speed: 0,
+	    maxspeed : 1.5,
+	    accel : 0.35,
+	    mass :20,
+	    velX: 0,
+	    velY: 0,
+	    friction : 0.8,
+	    rotation : 0,
+	    rotateaccel : 0.1,
+	    onGround : false,
+	    onGroundCheck : true,
+	    jumpHeight : 7,
+	    boostPower : 10,
+	    currentMaxDist: width,
+	    up : 73,
+	    down : 75,
+	    right : 76,
+	    left : 74,
+	    color : "red",
+	  }
+      player2 = {
+	sprite : document.getElementById("astronaut"),
+	gravityX : 0,
+	gravityY : 0,
+	gravity : 0.1,
+	gravAngle : 0,
+	radius : 20,
+	x : 0,
+	y : height/2,
+	speed: 0,
+	maxspeed : 1.5,
+	accel : 0.35,
+	mass : 20,
+	velX: 0,
+	velY: 0,
+	friction : 0.8,
+	rotation : 0,
+	rotateaccel : 0.1,
+	onGround : false,
+	onGroundCheck : true,
+	jumpHeight : 7,
+	boostPower : 10,
+	currentMaxDist: width,
+	up : 87,
+	down : 83,
+	right : 68,
+	left : 65,
+	color : "blue",
+      }
+      //create arrays
+      keys = [],
+      objectsClass = [],
+      goals = [];
+      //set canvas
+      canvas.width = width;
+      canvas.height = height;
+      //create goals
+      function goalCreate(){
+	this.x = width*Math.random();
+	this.y = height*Math.random();
+	this.radius = 5;
+	this.color = "green";
+	this.velX = 0;
+	this.velY = 0;
+      }
+      //creat balls
+      function objectCreate(){
+	this.radius = 40*Math.random();
+	if(this.radius < 10){
+	  this.radius = 10;
+	}
+	this.gravity = 0.99/this.radius;
+	this.x = width*Math.random();
+	this.y = height*Math.random();
+	this.mass = this.radius;
+	this.speed = 6;
+	this.accel = 1;
+	this.velX= 0;
+	this.velY= 0;
+	this.rotation = 0;
+	this.friction = 0.999;
+	this.color= "black";
+	this.maxDist = 5*this.radius;
+      }
+      for(var i = 0; i < 10*Math.random(); i++){
+	var object = new objectCreate();
+	objectsClass.push(object);
+      }
+      //create functions for the game
+      //other collision check
+      function checkCollision (ball0,ball1){
+	var dx = (ball1.x - ball0.x),
+	    dy = (ball1.y - ball0.y),
+	    dist = Math.sqrt(dx * dx + dy * dy);
+	if (dist < ball0.radius + ball1.radius) {
+          return true;
+	}
+      }
+      function checkCollision2 (ball0, ball1) {
+	var dx = (ball1.x - ball0.x),
+	    dy = (ball1.y - ball0.y),
+	    dist = Math.sqrt(dx * dx + dy * dy);
+	if (dist < ball0.radius + ball1.radius) {
+	  var dist2 = ((ball0.radius+ball1.radius)-dist)/2,
+	      angle = Math.atan2(dy, dx);
+	  ball0.velX += -1*Math.cos(angle)*dist2;
+	  ball0.velY += -1*Math.sin(angle)*dist2;
+	  ball1.velX += Math.cos(angle)*dist2;
+	  ball1.velY += Math.sin(angle)*dist2;
+	}
+      }
+      function checkCollision3 (ball0, ball1) {
+	var dx = (ball1.x - ball0.x),
+	    dy = (ball1.y - ball0.y),
+	    dist = Math.sqrt(dx * dx + dy * dy);
+	if (dist < ball0.radius + ball1.radius) {
+	  var dist2 = ((ball0.radius+ball1.radius)-dist),
+	      angle = Math.atan2(dy, dx);
+	  ball0.velX += -1*Math.cos(angle)*dist2;
+	  ball0.velY += -1*Math.sin(angle)*dist2;
+	  ball0.onGround = true;
+	  ball0.onGroundCheck = false;
+	}else if(ball0.onGroundCheck == true){
+	  ball0.onGround = false;
+	}
+      }
+
+      //stay inbounds
+      function inBounds(ball){
+	if (ball.x >= width-ball.radius) {
+	  ball.x = width-ball.radius;
+	  ball.velX *= -1;
+	} else if (ball.x-ball.radius <= 0) {
+	  ball.x = ball.radius;
+	  ball.velX *= -1;
+	}
+
+	if(ball.y >= height-ball.radius){
+	  ball.y = height-ball.radius;
+	  ball.velY *= -1;
+	} else if(ball.y-ball.radius <= 0){
+	  ball.y = ball.radius;
+	  ball.velY *= -1;
+	}
+      }
+      //move
+      function move(ball){
+	ball.velX *= ball.friction;
+	ball.velY *= ball.friction;
+	ball.speed *= ball.friction
+	ball.x += ball.velX;
+	ball.y += ball.velY;
+      }
+      //key check function
+      function keysCheck(player,up,down,right,left){
+	if(player.onGround == true){
+	  player.boostPower = 10;
+	}
+	if(keys[down]){
+	  var rotationUp = player.rotation + (Math.PI);
+	  player.speed = player.boostPower;
+	  player.velX += Math.cos(rotationUp)*player.speed;
+	  player.velY += Math.sin(rotationUp)*player.speed;
+	  player.boostPower = 0;
+	}	
+	if(player.currentMaxDist < width){
+	  player.accel = 0.35;
+	  player.maxspeed = 1.5;
+	  player.friction = 0.8;
+	  if (keys[up]) {//forward
+            if (player.onGround == true) {
+	      var rotationUp = player.rotation + (Math.PI);
+	      player.speed = player.jumpHeight;
+              player.velX += Math.cos(rotationUp)*player.speed;
+              player.velY += Math.sin(rotationUp)*player.speed;
+            } 
+	  }
+	  if (keys[right]) {//right
+	    var rotationRight = player.rotation - (0.5*Math.PI);
+	    if (player.speed < player.maxspeed) {
+              player.speed += player.accel;
+            }
+            player.velX += Math.cos(rotationRight)*player.speed; 
+            player.velY += Math.sin(rotationRight)*player.speed;
+	  }
+	  if (keys[left]) {//left
+	    var rotationLeft = player.rotation + (0.5*Math.PI);
+	    if (player.speed < player.maxspeed) {
+              player.speed += player.accel;
+            }
+            player.velX += Math.cos(rotationLeft)*player.speed; 
+            player.velY += Math.sin(rotationLeft)*player.speed;
+	  }
+	}else{
+	  player.accel = 0.015;
+	  player.maxspeed = 0.5;
+	  player.friction = 0.9;
+	  if (keys[left]) {//left
+            if (player.rotation >= 0) {       
+              player.rotation -= player.rotateaccel;
+            }
+            if (player.rotation < 0) {
+	      player.rotation = 2*Math.PI;
+	    }
+	  }
+	  if (keys[right]) {//right
+            if (player.rotation <= 2*Math.PI) {          
+              player.rotation += player.rotateaccel;
+            }
+            if (player.rotation > 2*Math.PI) {
+	      player.rotation = 0;
+	    }
+	  }
+	  if (keys[up]) {//forward
+            if (player.speed < player.maxspeed) {
+              player.speed += player.accel;
+            }
+	  }
+	  player.velX -= Math.cos(player.rotation)*player.speed; 
+	  player.velY -= Math.sin(player.rotation)*player.speed;
+	}
+      }
+      //gravity
+      function gravAccel(ball0,ball1){
+	var dx = (ball1.x - ball0.x),
+	    dy = (ball1.y - ball0.y),
+	    dist = Math.sqrt(dx * dx + dy * dy);
+	if(dist < ball1.maxDist){ 	
+	  ball0.gravAngle = Math.atan2(dy, dx);
+	  if(ball0.currentMaxDist > dist){
+	    ball0.rotation = ball0.gravAngle;
+	    ball0.currentMaxDist = dist;
+	  }
+	  ball0.velX += Math.cos(ball0.gravAngle)*ball0.mass*ball1.mass*ball0.gravity*(1/dist);
+	  ball0.velY += Math.sin(ball0.gravAngle)*ball0.mass*ball1.mass*ball0.gravity*(1/dist);
+	}
+      }
+      //draw object
+      function drawObject(object){
+	ctx.beginPath();
+	ctx.arc(object.x,object.y,object.radius,0,2*Math.PI);
+	ctx.stroke();
+	ctx.fillStyle=object.color;
+	ctx.fill();
+      }
+      function drawObjectPlayer(player){
+	//draw player and direction ball
+	ctx.beginPath();
+	ctx.arc(player.x,player.y,player.radius,0,2*Math.PI);
+	ctx.stroke();
+	ctx.fillStyle=player.color;
+	ctx.fill();
+	//direction ball
+	ctx.beginPath();
+	ctx.arc(player.x+(Math.cos(player.rotation+Math.PI)*player.radius),player.y+(Math.sin(player.rotation+Math.PI)*player.radius),player.radius/2.5,0,2*Math.PI);
+	ctx.fillStyle=player.color;
+	ctx.fill();
+      }
+      //draw image rotate
+      function drawImageRotate(img,x,y,rad){
+	ctx.save();
+	ctx.translate(x,y);
+	ctx.rotate(rad+(1.5*Math.PI));
+	ctx.translate(x*-1,y*-1);
+	ctx.drawImage(img,x-20,y-20);
+	ctx.rotate((rad+(1.5*Math.PI))*-1);
+	ctx.restore();
+      }
+      function update(){
+	//debug things
+	if (keys[75]){
+	}
+	// check keys
+	keysCheck(player1,player1.up,player1.down,player1.right,player1.left);
+	keysCheck(player2,player2.up,player2.down,player2.right,player2.left);
+	//update some stuff
+	player1.onGroundCheck = true;
+	player2.onGroundCheck = true;
+	player1.currentMaxDist = width;
+	player2.currentMaxDist = width;
+	//objects  
+	for(var i = 0; i < objectsClass.length; i++){
+	  gravAccel(player1,objectsClass[i]);	
+	  gravAccel(player2,objectsClass[i]);
+	  //if(checkCollision2(player1,objectsClass[i]) == true
+	  checkCollision3(player1,objectsClass[i]);
+	  checkCollision3(player2,objectsClass[i]);
+	  move(objectsClass[i]);
+	  inBounds(objectsClass[i]);
+	}
+	//goals
+	//creating goals
+	if((100*Math.random()) < 1){
+	  var goal = new goalCreate();
+	  goals.push(goal);
+	}
+	//collisions
+	for(var i = 0; i < goals.length; i++){
+	  if(checkCollision(player1,goals[i]) == true){
+	    score1 += 1;
+	    delete goals[i];
+	    goals.splice(i,1);
+	  }else if(checkCollision(player2,goals[i]) == true){
+	    score2 += 1;
+	    delete goals[i];
+	    goals.splice(i,1);
+	  }
+	}
+	//check collision
+	checkCollision2(player1,player2); 
+	//move balls
+	move(player1);
+	move(player2);
+	//make sure balls stay in canvas
+	inBounds(player1,0,width);
+	inBounds(player2,0,width);
+	//clear all stuff
+	ctx.clearRect(0,0,width,height);
+	//draw background
+	ctx.fillStyle = "white";
+	ctx.fillRect(0,0,width,height);       
+	//draw all the objects
+	drawObjectPlayer(player1);
+	drawObjectPlayer(player2);
+	//drawImageRotate(player1.sprite,player1.x,player1.y,player1.rotation);
+	//drawImageRotate(player2.sprite,player2.x,player2.y,player2.rotation);
+	for(var i = 0; i < goals.length; i++){
+	  drawObject(goals[i]);
+	}
+	for(var i = 0; i < objectsClass.length; i++){
+	  drawObject(objectsClass[i]);
+	  ctx.beginPath();
+	  ctx.arc(objectsClass[i].x,objectsClass[i].y,objectsClass[i].maxDist,0,2*Math.PI);
+	  ctx.stroke();
+	  
+	}
+	//draw score
+	ctx.fillStyle="purple";
+	ctx.font = "40px Arial";
+	ctx.fillText(score2+":"+score1,(width/2-25),30);
+	window.requestAnimationFrame(update);
+      }
+      document.body.addEventListener("keydown", function(e) {
+	keys[e.keyCode] = true;
+      });
+
+      document.body.addEventListener("keyup", function(e) {
+	keys[e.keyCode] = false;
+      });
+      window.addEventListener("load",function(){
+	update();
+      });
+    </script>
+  </body>
+</html>
